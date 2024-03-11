@@ -1,5 +1,11 @@
 
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.AI;
 
 public class sphereMove : MonoBehaviour
 {
@@ -9,36 +15,52 @@ public class sphereMove : MonoBehaviour
     private float speed;
     private Vector3 direction; //direction of balls movement
     private Vector3 colVec; // Distance from ball to wall, achieved with raycast
-    private bool incontact;
+    private List<GameObject> objectsToCollideWith = new List<GameObject>();
+    private List<GameObject> goingTowardsThese = new List<GameObject>();
+    private bool directinChanged;
 
     private void Start()
     {
         direction = Vector3.forward;
+        objectsToCollideWith = GameObject.FindGameObjectsWithTag("collisionObjects").ToList();
+        directinChanged = true;
     }
 
-    private void OnCollisionEnter(Collision col)
+    private void isCollisionObjectClose()
     {
-        colVec = col.contacts[0].normal;
-        incontact = true;
-    }
-    private void OnCollisionExit(Collision col)
-    {
-        incontact = false;
-    }
-
-    void Update()
-    {
-        transform.Translate(direction * speed * Time.deltaTime);
-        if (incontact)
+        if (directinChanged)
         {
-            Debug.Log(Vector3.Dot(direction.normalized, colVec.normalized));
-            if (Vector3.Dot(direction.normalized, colVec.normalized) < 1)
+            foreach (GameObject go in objectsToCollideWith)
+            {
+                colVec = gameObject.transform.position - go.transform.position;
+                Debug.Log(Vector3.Dot(direction.normalized, colVec.normalized));
+                if (Vector3.Dot(direction.normalized, colVec.normalized) < 0)
+                {
+                    goingTowardsThese.Add(go);
+                }
+            }
+            directinChanged = false;
+        }
+        foreach (GameObject go in goingTowardsThese)
+        {
+            colVec = gameObject.transform.position - go.transform.position;
+            if (Vector3.Dot(direction.normalized, colVec.normalized) > 0)
             {
                 direction.x *= -1;
                 direction.y *= -1;
                 direction.z *= -1;
+                goingTowardsThese.Clear();
+                directinChanged = true;
             }
         }
+    }
+
+    //basically
+    //if ball is close to objects in "collision" layer, check their normals and do dot product
+    void Update()
+    {
+        transform.Translate(direction * speed * Time.deltaTime);
+        isCollisionObjectClose();
     }
 }
 
